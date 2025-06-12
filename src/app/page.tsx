@@ -1,103 +1,165 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState } from "react";
+import QRCode from "qrcode";
+import Logo from "@/assets/icons/Logo";
+
+type ErrorCorrectionLevel = "L" | "M" | "Q" | "H";
+
+export default function HomePage() {
+  const [inputData, setInputData] = useState<string>("");
+
+  const [errorLevel, setErrorLevel] = useState<ErrorCorrectionLevel>("M");
+
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
+
+  const errorCorrectionLevels: {
+    value: ErrorCorrectionLevel;
+    label: string;
+  }[] = [
+    { value: "L", label: "Muy Bajo (7%)" },
+    { value: "M", label: "Bajo (15%)" },
+    { value: "Q", label: "Medio (25%)" },
+    { value: "H", label: "Alto (30%)" },
+  ];
+
+  const handleGenerate = async () => {
+    if (!inputData || inputData == "") {
+      alert("Por favor, ingresa datos para generar el código QR.");
+      setQrCodeUrl("");
+      return;
+    }
+
+    try {
+      const options = {
+        errorCorrectionLevel: errorLevel,
+        margin: 2,
+        scale: 8,
+        width: 256,
+        color: { dark: "#000000", light: "#FFFFFF" },
+      };
+
+      const url = await QRCode.toDataURL(inputData, options);
+      setQrCodeUrl(url);
+    } catch (err) {
+      console.error("Fallo al generar el código QR:", err);
+      setQrCodeUrl("");
+    }
+  };
+
+  const handleDownload = () => {
+    if (!qrCodeUrl) return;
+
+    const link = document.createElement("a");
+    link.href = qrCodeUrl;
+    const safeFilename =
+      inputData
+        .substring(0, 20)
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase() || "codigo_qr";
+    link.download = `${safeFilename}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+    <main className="min-h-screen ">
+      <div className="px-4 h-16 flex items-center border-b w-full justify-center border-b-neutral-300">
+        <Logo className="size-5 mr-2" />
+        <h1 className="font-bold">Generador de QR Simple</h1>
+      </div>
+      <section className="flex justify-center items-center min-h-[calc(100vh-4rem)] w-full px-4 py-5">
+        <div className="w-full max-w-md rounded-lg bg-white">
+          {/* Entrada para los datos del Código QR */}
+          <div className="mb-4">
+            <label
+              htmlFor="qr-data"
+              className="mb-2 block font-semibold text-gray-700"
+            >
+              Datos para el QR
+            </label>
+            <input
+              id="qr-data"
+              type="text"
+              value={inputData}
+              onChange={(e) => setInputData(e.target.value)}
+              placeholder="ej: https://www.ejemplo.com"
+              className="w-full rounded-md border border-gray-300 p-3 text-lg focus:ring focus:border-blue-500 focus:ring-blue-500"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+
+          {/* Botones de opción para el Nivel de Corrección de Errores */}
+          <div className="mb-6">
+            <fieldset>
+              <legend className="mb-2 block font-semibold text-gray-700">
+                Nivel de Durabilidad
+              </legend>
+              <p className="text-sm text-gray-600 mb-2">
+                El nivel de resistencia a error del QR, entre mas alto el QR
+                podra seguir siendo escaneado incluso si se manchan o borran
+                algunas zonas{" "}
+              </p>
+              <div className="flex flex-wrap justify-between gap-2">
+                {errorCorrectionLevels.map(({ value, label }) => (
+                  <label
+                    key={value}
+                    className="flex cursor-pointer items-center space-x-2 rounded-md border border-gray-300 p-2 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 w-40"
+                  >
+                    <input
+                      type="radio"
+                      name="error-level"
+                      value={value}
+                      checked={errorLevel === value}
+                      onChange={() => setErrorLevel(value)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>{label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          </div>
+
+          {/* --- NUEVO: Botón para generar el código QR --- */}
+          <button
+            onClick={handleGenerate}
+            className="w-full rounded-lg bg-green-600 px-5 py-3 text-lg font-semibold text-white shadow-md transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 cursor-pointer"
           >
-            Read our docs
-          </a>
+            Generar Código QR
+          </button>
+
+          {qrCodeUrl && (
+            <div className="mt-6 flex flex-col items-center border-t pt-6">
+              <h2 className="mb-2 text-lg font-semibold text-gray-600">
+                Tu Código QR
+              </h2>
+              <div className="rounded-lg border border-gray-200 bg-white p-2">
+                <img src={qrCodeUrl} alt="Código QR generado" />
+              </div>
+
+              <button
+                onClick={handleDownload}
+                className="mt-4 flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white shadow-md transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 9.707a1 1 0 011.414 0L9 11.293V3a1 1 0 112 0v8.293l1.293-1.586a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Descargar PNG
+              </button>
+            </div>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </section>
+    </main>
   );
 }
